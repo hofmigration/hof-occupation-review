@@ -71,13 +71,20 @@ judged from HubSpot, so it is always left to a person.
 | **Marked eligible, rules say no** | Waleed's question: leads taken forward that the criteria say no to |
 | **Marked out, could onboard** | leads turned away that fit at least one program |
 | **Customers — ineligible profile** | clients already taken on whose profile fails — check these first |
+| **By consultant** | where each consultant's markings and the rules disagree |
 | **By nationality** · **By source** | counts, percentages, and how each group fares |
 | **Can't tell** | job titles too vague or unreadable to judge |
 | **All leads** | every lead, with its verdict for each program and a HubSpot link |
 | **How it was checked** | the rules and the limits |
 
-The email has the headline numbers. If the workbook is small enough it's attached;
-otherwise it's under **Artifacts** on the run.
+**The email carries the whole report in its body** — every section above, each with its
+top rows and a count of how many more are in the workbook, and every lead linked to HubSpot.
+
+Gmail cuts off emails over about 100 KB, which would hide the bottom of the report. So the
+email checks its own size and, if it's ever too big, shows fewer rows per section until it
+fits. A test with 20,000 leads came to 56 KB without needing to shrink.
+
+If the workbook is small enough it's attached; otherwise it's under **Artifacts** on the run.
 
 ---
 
@@ -125,4 +132,4 @@ Australia.
 ## Changing a rule
 
 Everything is in `config.js` in plain words. Every rule has a test in `selftest.js` —
-`66 passed, 0 failed` — which runs before each review, so a broken rule stops the run.
+`81 passed, 0 failed` — which runs before each review, so a broken rule stops the run.
