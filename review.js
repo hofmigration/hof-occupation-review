@@ -7,7 +7,7 @@ const F = require("./1-facts");
 const C = require("./2-classify");
 const { assessLead } = require("./3-assess");
 const { writeWorkbook } = require("./4-workbook");
-const { buildEmail, sendEmail } = require("./5-email");
+const { fitEmail, sendEmail } = require("./5-email");
 const { aggregate, present } = require("./6-aggregate");
 
 const OFF = SETTINGS.TZ_OFFSET_HOURS * 3600e3;
@@ -88,8 +88,9 @@ const FIELDS = ["firstname", "lastname", "createdate", "hubspot_owner_id", "life
 
     if (!SETTINGS.SEND_EMAIL) { console.log("Not emailed — send_email was false."); return; }
     const attach = mb <= SETTINGS.ATTACH_LIMIT_MB;
-    const html = buildEmail(R, attach);
-    fs.writeFileSync(path.join(SETTINGS.OUT_DIR, "summary.html"), html);
+    const { html, bytes } = fitEmail(R, attach);
+    fs.writeFileSync(path.join(SETTINGS.OUT_DIR, "report.html"), html);
+    console.log(`Email report: ${(bytes / 1024).toFixed(0)} KB (Gmail clips above about 100 KB).`);
     const ok = await sendEmail(`Occupation review ${periodText}: ${R.tabs.markedEligible.length} marked eligible but not, ${R.tabs.markedOut.length} turned away but could onboard`,
       html, attach ? { filename: path.basename(file), content: fs.readFileSync(file).toString("base64") } : null);
     if (ok) console.log(`Emailed to ${SETTINGS.REPORT_TO}${attach ? " with the workbook attached" : " — the workbook is in Artifacts"}.`);
