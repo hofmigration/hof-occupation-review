@@ -67,12 +67,21 @@ function aggregate(leads, lookupStats) {
   }).sort((x, y) => y.leads - x.leads);
 
   const sortGroups = (m) => [...m.values()].sort((x, y) => y.leads - x.leads);
+
+  // per consultant: how many leads they own, and how many of their markings the rules disagree with
+  const cons = new Map();
+  const consRow = (o) => cons.get(o) || cons.set(o, { owner: o, leads: 0, markedEligible: 0, markedOut: 0 }).get(o);
+  for (const L of leads) consRow(L.f.owner).leads++;
+  tabs.markedEligible.forEach((L) => consRow(L.f.owner).markedEligible++);
+  tabs.markedOut.forEach((L) => consRow(L.f.owner).markedOut++);
+  const byConsultant = [...cons.values()].filter((c) => c.markedEligible || c.markedOut)
+    .sort((x, y) => (y.markedEligible + y.markedOut) - (x.markedEligible + x.markedOut));
   const byNationality = sortGroups(nat);
   const natRecorded = byNationality.filter((g) => g.key !== "Not recorded");
   const natMissing = byNationality.find((g) => g.key === "Not recorded");
 
   return {
-    programs, tabs, completeness, noneCount, customerCount, occupations,
+    programs, tabs, completeness, noneCount, customerCount, occupations, byConsultant,
     byNationality: natMissing ? [...natRecorded, natMissing] : natRecorded,
     bySource: sortGroups(src), byForm: sortGroups(frm).slice(0, 60),
     cantTell: [...cant.values()].sort((x, y) => y.leads - x.leads).slice(0, 1000),
