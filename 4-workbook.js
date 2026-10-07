@@ -38,7 +38,7 @@ function dataRow(ws, vals, paint = {}) {
     const v = vals[col - 1];
     if (v && typeof v === "object" && v.hyperlink) c.font = F({ color: { argb: ROYAL }, underline: true });
     else c.font = F();
-    if (paint[col]) { c.fill = fill(paint[col][0]); c.font = F({ bold: true, color: { argb: paint[col][1] } }); }
+    if (paint[col] && paint[col][0]) { c.fill = fill(paint[col][0]); c.font = F({ bold: true, color: { argb: paint[col][1] } }); }
   });
   r.commit();
 }
@@ -118,6 +118,13 @@ async function writeWorkbook(file, R) {
   titleRow(ws, "Customers whose recorded profile fails the criteria", "Clients already taken on. Check each one — the risk here is refunds and complaints.");
   headerRow(ws, ["Customer for", "Why it fails", ...leadCols]);
   R.tabs.customers.forEach((L) => dataRow(ws, [PROGRAM_NAME[L.a.customerIneligible.program], L.a.customerIneligible.why, ...leadVals(L)], { 1: VCOL[CANNOT] }));
+  await ws.commit();
+
+  // ---------- 6b. By consultant ----------
+  ws = sheet(wb, "By consultant", [30, 12, 26, 26], { freeze: 3 });
+  titleRow(ws, "Where the markings and the rules disagree, by consultant", "The owner of each lead. A high number is a pattern worth a conversation, not proof on its own.");
+  headerRow(ws, ["Consultant", "Leads owned", "Marked eligible, rules say no", "Turned away, could onboard"]);
+  R.byConsultant.forEach((c) => dataRow(ws, [c.owner, c.leads, c.markedEligible, c.markedOut], { 3: c.markedEligible ? VCOL[CANNOT] : null, 4: c.markedOut ? VCOL[ASSESS] : null }));
   await ws.commit();
 
   // ---------- 7. By nationality ----------
