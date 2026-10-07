@@ -117,6 +117,29 @@ check("an eligible occupation is not listed as can't-onboard", !R.occupations.so
 check("a vague title goes to Can't tell", R.cantTell.length === 1);
 check("'Not recorded' nationality is kept as its own row, last", R.byNationality[R.byNationality.length - 1].key === "Not recorded");
 
+// ---- by consultant ----
+check("consultants with mismatches are listed", Array.isArray(R.byConsultant) && R.byConsultant.length >= 1);
+check("a consultant's mismatch counts add up", R.byConsultant.reduce((t, c) => t + c.markedOut, 0) === R.tabs.markedOut.length);
+
+// ---- the email carries the whole report ----
+const { buildEmail, fitEmail, LIMIT } = require("./5-email");
+const R2 = { ...R, leads, periodText: "2025-01-01 to 2026-10-07" };
+const html = buildEmail(R2, false);
+["By program", "Occupations we can't onboard", "Turned away, but could be onboarded", "By consultant", "By nationality", "By source", "Job titles a person needs to read", "How complete the data is", "How it was judged"]
+  .forEach((sec) => check(`the email includes "${sec}"`, html.includes(sec), sec));
+check("the email links each lead to HubSpot", /href="https:\/\/x"/.test(html));
+check("the email escapes text", !/<script/i.test(html));
+
+// a very large result must still fit under Gmail's clipping limit
+const big = Array.from({ length: 6000 }, (_, i) => {
+  const L = lead({ lead_stage: i % 2 ? "Occupation Not Listed" : "USA NIW", education_level: "Other", years_of_experience_new: "1-4", firstname: "Very Long Client Name", lastname: String(i), hubspot_owner_id: String(i % 40) }, i % 2 ? OCC.chef : OCC.draft);
+  return present({ ...L, link: "https://app.hubspot.com/contacts/23735726/record/0-1/" + (900000000 + i) });
+});
+const RB = { ...aggregate(big, { titles: 2, read: 2, cached: 0, decided: 0, left: 0, stopped: "" }), leads: big, periodText: "2025-01-01 to 2026-10-07" };
+const fit = fitEmail(RB, false);
+check(`a 6,000-lead result fits under Gmail's limit (${Math.round(fit.bytes / 1024)} KB)`, fit.bytes <= LIMIT);
+check("when shrunk, it says how many more are in the workbook", /more in the workbook/.test(fit.html));
+
 // ---- config ----
 check("Australia's age limit is under 45", SETTINGS.AU_MAX_AGE === 45);
 check("only titles are sent to the reader — no names in the prompt", !/firstname|lastname|email|phone/.test(require("fs").readFileSync("./2-classify.js", "utf8").split("const PROMPT")[1].split("function tidy")[0]));
