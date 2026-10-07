@@ -1,0 +1,68 @@
+name: Occupation eligibility review
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_date:
+        description: "From date, YYYY-MM-DD"
+        required: true
+        default: "2025-01-01"
+        type: string
+      to_date:
+        description: "To date, YYYY-MM-DD — leave blank for today"
+        required: false
+        default: ""
+        type: string
+      send_email:
+        description: "Email the summary?"
+        required: true
+        type: choice
+        default: "true"
+        options: ["true", "false"]
+      max_ai_requests:
+        description: "Most job-title requests to make this run (the rest carry over)"
+        required: true
+        default: "400"
+        type: string
+
+# needed so the job-title cache can be saved back to the repo after each run
+permissions:
+  contents: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install --no-audit --no-fund
+      - name: Check the rules still work
+        run: node selftest.js
+      - run: node --max-old-space-size=6144 review.js
+        env:
+          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
+          GEMINI_KEY: ${{ secrets.GEMINI_KEY }}
+          GEMINI_KEY_2: ${{ secrets.GEMINI_KEY_2 }}
+          RESEND_KEY: ${{ secrets.RESEND_KEY }}
+          FROM_DATE: ${{ inputs.from_date }}
+          TO_DATE: ${{ inputs.to_date }}
+          SEND_EMAIL: ${{ inputs.send_email }}
+          MAX_AI_REQUESTS: ${{ inputs.max_ai_requests }}
+      # saved even if the run failed part-way, so no reading is ever wasted
+      - name: Save the job-title cache
+        if: always()
+        run: |
+          git config user.name "occupation-review-bot"
+          git config user.email "actions@github.com"
+          git add cache/titles.json
+          git diff --cached --quiet || (git commit -m "Job-title cache: $(date -u +%F)" && git push)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: occupation-review
+          path: out/
+          retention-days: 30
+          if-no-files-found: ignore
